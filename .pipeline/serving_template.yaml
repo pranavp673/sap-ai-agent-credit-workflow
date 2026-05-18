@@ -35,7 +35,7 @@ spec:
         maxReplicas: 3
         containers:
           - name: kserve-container
-            image: "docker.io/pranavp673/credit-agent:latest"
+            image: "ghcr.io/pranavp673/credit-agent:latest"
             ports:
               - containerPort: 8080
                 protocol: TCP
