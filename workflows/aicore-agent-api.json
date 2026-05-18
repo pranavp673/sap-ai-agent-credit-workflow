@@ -1,0 +1,157 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Credit Agent AI Core",
+    "description": "AI Agent for evaluating credit note requests",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "https://api.ai.prod.us-east-1.aws.ml.hana.ondemand.com/v2/inference/deployments/db945e64534fe3ff"
+    }
+  ],
+  "paths": {
+    "/v1/evaluate": {
+      "post": {
+        "operationId": "evaluateCreditNote",
+        "summary": "Evaluate a credit note request using AI agent",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreditNoteRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Agent evaluation result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentDecision"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/health": {
+      "get": {
+        "operationId": "healthCheck",
+        "summary": "Check agent health status",
+        "responses": {
+          "200": {
+            "description": "Health status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "healthy"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CreditNoteRequest": {
+        "type": "object",
+        "required": ["credit_note_id", "customer_id", "amount", "currency", "reason"],
+        "properties": {
+          "credit_note_id": {
+            "type": "string",
+            "description": "Credit note document ID",
+            "example": "CN-2026-001"
+          },
+          "customer_id": {
+            "type": "string",
+            "description": "SAP customer number",
+            "example": "CUST-1000"
+          },
+          "amount": {
+            "type": "number",
+            "format": "double",
+            "description": "Credit note amount",
+            "example": 5000.00
+          },
+          "currency": {
+            "type": "string",
+            "description": "Currency code",
+            "example": "USD"
+          },
+          "reason": {
+            "type": "string",
+            "description": "Reason for credit note",
+            "example": "Damaged goods returned"
+          },
+          "line_items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "material": {
+                  "type": "string"
+                },
+                "quantity": {
+                  "type": "number"
+                },
+                "unit_price": {
+                  "type": "number"
+                }
+              }
+            }
+          }
+        }
+      },
+      "AgentDecision": {
+        "type": "object",
+        "properties": {
+          "credit_note_id": {
+            "type": "string",
+            "description": "Credit note document ID"
+          },
+          "decision": {
+            "type": "string",
+            "enum": ["approve", "reject", "escalate"],
+            "description": "Agent decision"
+          },
+          "confidence": {
+            "type": "number",
+            "format": "double",
+            "description": "Confidence score 0.0 to 1.0"
+          },
+          "reasoning": {
+            "type": "string",
+            "description": "Agent reasoning for the decision"
+          },
+          "actions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "action": {
+                  "type": "string"
+                },
+                "target": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

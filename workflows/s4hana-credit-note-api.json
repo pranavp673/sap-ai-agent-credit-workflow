@@ -1,0 +1,166 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "S4HANA Credit Memo API",
+    "description": "SAP S/4HANA OData API for creating and managing credit memos",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "https://saptests4hana.eu-west-1.compute.internal:52001/sap/opu/odata/sap"
+    }
+  ],
+  "paths": {
+    "/API_CREDIT_MEMO_REQUEST_SRV/A_CreditMemoRequest": {
+      "post": {
+        "operationId": "createCreditMemo",
+        "summary": "Create a credit memo request in S/4HANA",
+        "parameters": [
+          {
+            "name": "sap-client",
+            "in": "header",
+            "schema": {
+              "type": "string",
+              "default": "100"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreditMemoRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Credit memo created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreditMemoResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "operationId": "getCreditMemos",
+        "summary": "Get list of credit memo requests",
+        "parameters": [
+          {
+            "name": "$top",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 10
+            }
+          },
+          {
+            "name": "$filter",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of credit memo requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "d": {
+                      "type": "object",
+                      "properties": {
+                        "results": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/CreditMemoResponse"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CreditMemoRequest": {
+        "type": "object",
+        "required": ["CreditMemoRequestType", "SalesOrganization", "SoldToParty"],
+        "properties": {
+          "CreditMemoRequestType": {
+            "type": "string",
+            "description": "Document type for credit memo",
+            "example": "CR"
+          },
+          "SalesOrganization": {
+            "type": "string",
+            "description": "Sales organization",
+            "example": "1000"
+          },
+          "DistributionChannel": {
+            "type": "string",
+            "description": "Distribution channel",
+            "example": "10"
+          },
+          "OrganizationDivision": {
+            "type": "string",
+            "description": "Division",
+            "example": "00"
+          },
+          "SoldToParty": {
+            "type": "string",
+            "description": "Customer number",
+            "example": "1000"
+          },
+          "PurchaseOrderByCustomer": {
+            "type": "string",
+            "description": "Customer reference / PO number"
+          },
+          "CreditMemoRequestReason": {
+            "type": "string",
+            "description": "Reason for credit memo"
+          }
+        }
+      },
+      "CreditMemoResponse": {
+        "type": "object",
+        "properties": {
+          "CreditMemoRequest": {
+            "type": "string",
+            "description": "Credit memo document number"
+          },
+          "CreditMemoRequestType": {
+            "type": "string"
+          },
+          "SalesOrganization": {
+            "type": "string"
+          },
+          "SoldToParty": {
+            "type": "string"
+          },
+          "CreationDate": {
+            "type": "string"
+          },
+          "OverallSDProcessStatus": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}
