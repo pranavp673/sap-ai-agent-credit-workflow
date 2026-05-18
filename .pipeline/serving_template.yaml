@@ -24,10 +24,10 @@ spec:
   template:
     apiVersion: "serving.kserve.io/v1beta1"
     metadata:
-      annotations:
+      annotations: |
         autoscaling.knative.dev/metric: "concurrency"
         autoscaling.knative.dev/target: "1"
-    spec:
+    spec: |
       predictor:
         imagePullSecrets:
           - name: docker-registry-secret
