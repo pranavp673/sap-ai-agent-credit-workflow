@@ -19,7 +19,6 @@ spec:
         description: "SAP S/4HANA system hostname"
       - name: agent_model
         type: string
-        default: "gpt-4"
         description: "Foundation model to use for agent reasoning"
   template:
     apiVersion: "serving.kserve.io/v1beta1"
