@@ -14,12 +14,10 @@ metadata:
 spec:
   inputs:
     parameters:
-      - name: s4hana_host
+      - name: s4hanaHost
         type: string
-        description: "SAP S/4HANA system hostname"
-      - name: agent_model
+      - name: agentModel
         type: string
-        description: "Foundation model to use for agent reasoning"
   template:
     apiVersion: "serving.kserve.io/v1beta1"
     metadata:
@@ -40,6 +38,6 @@ spec:
                 protocol: TCP
             env:
               - name: S4HANA_HOST
-                value: "{{s4hana_host}}"
+                value: "{{s4hanaHost}}"
               - name: AGENT_MODEL
-                value: "{{agent_model}}"
+                value: "{{agentModel}}"
