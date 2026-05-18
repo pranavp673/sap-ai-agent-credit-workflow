@@ -12,12 +12,6 @@ metadata:
     executables.ai.sap.com/id: "credit-agent-server"
     ai.sap.com/version: "1.0.0"
 spec:
-  inputs:
-    parameters:
-      - name: s4hanaHost
-        type: string
-      - name: agentModel
-        type: string
   template:
     apiVersion: "serving.kserve.io/v1beta1"
     metadata:
@@ -36,8 +30,3 @@ spec:
             ports:
               - containerPort: 8080
                 protocol: TCP
-            env:
-              - name: S4HANA_HOST
-                value: "{{s4hanaHost}}"
-              - name: AGENT_MODEL
-                value: "{{agentModel}}"
