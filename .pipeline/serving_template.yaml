@@ -1,0 +1,46 @@
+apiVersion: ai.sap.com/v1alpha1
+kind: ServingTemplate
+metadata:
+  name: credit-agent-serving
+  annotations:
+    scenarios.ai.sap.com/description: "AI Agent for Credit Note Processing"
+    scenarios.ai.sap.com/name: "credit-agent"
+    executables.ai.sap.com/description: "Serving executable for credit workflow agent"
+    executables.ai.sap.com/name: "credit-agent-server"
+  labels:
+    scenarios.ai.sap.com/id: "credit-agent"
+    executables.ai.sap.com/id: "credit-agent-server"
+    ai.sap.com/version: "1.0.0"
+spec:
+  inputs:
+    parameters:
+      - name: s4hana_host
+        type: string
+        description: "SAP S/4HANA system hostname"
+      - name: agent_model
+        type: string
+        default: "gpt-4"
+        description: "Foundation model to use for agent reasoning"
+  template:
+    apiVersion: "serving.kserve.io/v1beta1"
+    metadata:
+      annotations:
+        autoscaling.knative.dev/metric: "concurrency"
+        autoscaling.knative.dev/target: "1"
+    spec:
+      predictor:
+        imagePullSecrets:
+          - name: docker-registry-secret
+        minReplicas: 1
+        maxReplicas: 3
+        containers:
+          - name: kserve-container
+            image: "docker.io/pranavp673/credit-agent:latest"
+            ports:
+              - containerPort: 8080
+                protocol: TCP
+            env:
+              - name: S4HANA_HOST
+                value: "{{s4hana_host}}"
+              - name: AGENT_MODEL
+                value: "{{agent_model}}"
