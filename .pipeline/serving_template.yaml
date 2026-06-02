@@ -34,7 +34,7 @@ spec:
               - name: AICORE_BASE_URL
                 value: "https://api.ai.prod.us-east-1.aws.ml.hana.ondemand.com"
               - name: AICORE_AUTH_URL
-                value: "https://dev-us-at5dbujw.authentication.us10.hana.ondemand.com/oauth/token"
+                value: "https://dev-us-at5dbujw.authentication.us10.hana.ondemand.com"
               - name: AICORE_CLIENT_ID
                 value: "sb-76eb51b7-4c36-4686-b652-edb70cce0c0c!b123476|aicore!b164"
               - name: AICORE_CLIENT_SECRET

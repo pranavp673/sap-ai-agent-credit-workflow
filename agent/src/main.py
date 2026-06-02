@@ -38,9 +38,15 @@ outside the JSON. Use exactly this format:
 
 
 def _build_openai_client():
-    """Build a gen_ai_hub OpenAI client, explicitly configured from env vars."""
+    """
+    Build a gen_ai_hub OpenAI client.
+
+    The SDK auto-configures from AICORE_* environment variables:
+      AICORE_BASE_URL, AICORE_AUTH_URL, AICORE_CLIENT_ID, AICORE_CLIENT_SECRET
+    These are injected by the AI Core serving template at runtime.
+    """
     from ai_core_sdk.ai_core_v2_client import AICoreV2Client
-    from gen_ai_hub.proxy.core.proxy_clients import GenAIHubProxyClient
+    from gen_ai_hub.proxy.core.proxy_clients import get_proxy_client
     from gen_ai_hub.proxy.native.openai.clients import OpenAI
 
     base_url = os.environ.get("AICORE_BASE_URL", "https://api.ai.prod.us-east-1.aws.ml.hana.ondemand.com")
@@ -61,7 +67,7 @@ def _build_openai_client():
         client_secret=client_secret,
         resource_group=resource_group,
     )
-    proxy_client = GenAIHubProxyClient(ai_core_client=ai_core_client)
+    proxy_client = get_proxy_client("gen-ai-hub", ai_core_client=ai_core_client)
     return OpenAI(proxy_client=proxy_client)
 
 
