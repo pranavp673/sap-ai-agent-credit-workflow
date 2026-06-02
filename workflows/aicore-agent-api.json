@@ -7,7 +7,7 @@
   },
   "servers": [
     {
-      "url": "https://api.ai.prod.us-east-1.aws.ml.hana.ondemand.com/v2/inference/deployments/d55bfb7e0ad04450"
+      "url": "https://api.ai.prod.us-east-1.aws.ml.hana.ondemand.com/v2/inference/deployments/d08b49243f582f13"
     }
   ],
   "paths": {
