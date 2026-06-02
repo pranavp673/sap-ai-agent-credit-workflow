@@ -41,5 +41,7 @@ spec:
                 value: "457f3080-87ac-4e94-b5cb-888e3e6d679d$jplaiifcOIPwIaZEppNnjNhs1eaKX-MBpW7caq17DBE="
               - name: AICORE_RESOURCE_GROUP
                 value: "default"
+              - name: GENAI_HUB_DEPLOYMENT_ID
+                value: "dfbb456bbb32fd15"
               - name: AGENT_MODEL
                 value: "gpt-4o"
