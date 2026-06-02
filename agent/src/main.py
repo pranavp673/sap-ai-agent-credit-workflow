@@ -1,9 +1,9 @@
 """
 SAP AI Agent for Credit Note Processing.
 
-Receives credit note requests from SAP Build Process Automation,
-evaluates them using a foundation model, and takes actions
-via S/4HANA OData APIs.
+Receives credit charge requests from SAP Build Process Automation,
+evaluates them using SAP Generative AI Hub (LLM), and returns a
+structured decision for the workflow routing gateway.
 """
 
 import os
@@ -14,9 +14,115 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-S4HANA_HOST = os.environ.get("S4HANA_HOST", "")
-AGENT_MODEL = os.environ.get("AGENT_MODEL", "gpt-4")
 PORT = int(os.environ.get("PORT", "8080"))
+AGENT_MODEL = os.environ.get("AGENT_MODEL", "gpt-4o")
+
+SYSTEM_PROMPT = """\
+You are a credit charge evaluation agent for a government tax agency (HMRC-style).
+Your job is to evaluate incoming VAT/tax credit charge requests and decide whether to:
+
+- "approve": Auto-approve. Use when the request is routine, the amount is reasonable,
+  the duty type is standard, and there are no anomalies.
+- "escalate": Send to a human approver. Use when the amount is large (above 1000),
+  the notes are vague or missing, or when the request needs human judgement.
+- "reject": Reject outright. Use for clearly invalid requests (negative amounts,
+  missing charge type, or nonsensical data).
+
+IMPORTANT: You MUST respond with ONLY a valid JSON object — no markdown, no explanation
+outside the JSON. Use exactly this format:
+{
+  "decision": "approve" | "escalate" | "reject",
+  "confidence": <number between 0.0 and 1.0>,
+  "reasoning": "<one sentence explaining the decision>"
+}"""
+
+
+def evaluate_with_llm(charges: dict) -> dict:
+    """Call SAP Generative AI Hub to evaluate the credit charge request."""
+    try:
+        from gen_ai_hub.proxy.native.openai.clients import OpenAI
+        client = OpenAI()
+    except Exception as e:
+        logger.error("Failed to initialise Generative AI Hub client: %s", e)
+        raise
+
+    amount = charges.get("amount", charges.get("Amount", 0))
+    charge_tp = charges.get("charge_TP", charges.get("Charge_TP", "Unknown"))
+    duty_tp = charges.get("duty_TP", charges.get("Duty_TP", "Unknown"))
+    issue_dt = charges.get("issue_Dt", charges.get("Issue_Dt", "Unknown"))
+    per_fr = charges.get("per_Fr_Dt", charges.get("Per_Fr_Dt", "Unknown"))
+    per_to = charges.get("per_To_Dt", charges.get("Per_To_Dt", "Unknown"))
+    notes = charges.get("loc_Ref_Notes", charges.get("Loc_Ref_Notes", "None provided"))
+
+    user_message = f"""\
+Evaluate this VAT/tax credit charge request:
+
+  Charge Type   : {charge_tp}
+  Duty Type     : {duty_tp}
+  Amount        : {amount}
+  Issue Date    : {issue_dt}
+  Period From   : {per_fr}
+  Period To     : {per_to}
+  Reference Notes: {notes}
+
+Return your decision as JSON."""
+
+    logger.info("Sending request to Gen AI Hub model %s", AGENT_MODEL)
+    response = client.chat.completions.create(
+        model=AGENT_MODEL,
+        messages=[
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": user_message},
+        ],
+        response_format={"type": "json_object"},
+        temperature=0.1,
+    )
+
+    raw = response.choices[0].message.content
+    logger.info("LLM raw response: %s", raw)
+    return json.loads(raw)
+
+
+def evaluate_credit_request(request: dict) -> dict:
+    """
+    Main evaluation entry point called by /v1/evaluate.
+
+    The SAP Build PA workflow sends either:
+      { "charges": { amount, charge_TP, duty_TP, ... } }   ← workflow context shape
+    or the OpenAPI schema fields directly:
+      { "credit_note_id": ..., "amount": ..., "reason": ... }
+    We handle both.
+    """
+    # Prefer the nested 'charges' object if present (workflow sends this)
+    charges = request.get("charges") or request
+
+    amount = charges.get("amount", charges.get("Amount", 0))
+    logger.info("Evaluating credit charge: amount=%s, request keys=%s", amount, list(charges.keys()))
+
+    try:
+        llm_result = evaluate_with_llm(charges)
+        decision = llm_result.get("decision", "escalate")
+        confidence = float(llm_result.get("confidence", 0.5))
+        reasoning = llm_result.get("reasoning", "No reasoning provided.")
+    except Exception as e:
+        logger.error("LLM evaluation failed: %s — falling back to escalate", e)
+        decision = "escalate"
+        confidence = 0.0
+        reasoning = f"LLM evaluation failed ({e}); routing to human approver."
+
+    # Validate decision value
+    if decision not in ("approve", "escalate", "reject"):
+        logger.warning("Unexpected decision '%s' from LLM — defaulting to escalate", decision)
+        decision = "escalate"
+
+    logger.info("Decision: %s (confidence=%.2f) — %s", decision, confidence, reasoning)
+
+    return {
+        "decision": decision,
+        "confidence": confidence,
+        "reasoning": reasoning,
+        "actions": [],
+    }
 
 
 class AgentHandler(BaseHTTPRequestHandler):
@@ -46,51 +152,13 @@ class AgentHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(json.dumps(payload).encode())
 
-
-def evaluate_credit_request(request: dict) -> dict:
-    """
-    Evaluate a credit note request and return a decision.
-
-    Expected input:
-        {
-            "credit_note_id": "...",
-            "customer_id": "...",
-            "amount": 1234.56,
-            "currency": "USD",
-            "reason": "...",
-            "line_items": [...]
-        }
-
-    Returns:
-        {
-            "decision": "approve" | "reject" | "escalate",
-            "confidence": 0.0-1.0,
-            "reasoning": "...",
-            "actions": [...]
-        }
-    """
-    credit_note_id = request.get("credit_note_id", "unknown")
-    amount = request.get("amount", 0)
-    reason = request.get("reason", "")
-
-    logger.info("Evaluating credit note %s for amount %s", credit_note_id, amount)
-
-    # TODO: integrate with SAP Generative AI Hub for reasoning
-    # TODO: call S/4HANA OData APIs to verify customer history
-    # TODO: implement approval logic based on agent evaluation
-
-    return {
-        "credit_note_id": credit_note_id,
-        "decision": "escalate",
-        "confidence": 0.0,
-        "reasoning": "Agent evaluation not yet implemented — routing to human approver.",
-        "actions": [],
-    }
+    def log_message(self, fmt, *args):  # suppress default access log noise
+        logger.debug(fmt, *args)
 
 
 def main():
     server = HTTPServer(("0.0.0.0", PORT), AgentHandler)
-    logger.info("Credit agent serving on port %d", PORT)
+    logger.info("Credit agent serving on port %d (model=%s)", PORT, AGENT_MODEL)
     server.serve_forever()
 
 
