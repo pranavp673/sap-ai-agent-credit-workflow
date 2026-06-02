@@ -37,11 +37,38 @@ outside the JSON. Use exactly this format:
 }"""
 
 
+def _build_openai_client():
+    """Build a gen_ai_hub OpenAI client, explicitly configured from env vars."""
+    from ai_core_sdk.ai_core_v2_client import AICoreV2Client
+    from gen_ai_hub.proxy.core.proxy_clients import GenAIHubProxyClient
+    from gen_ai_hub.proxy.native.openai.clients import OpenAI
+
+    base_url = os.environ.get("AICORE_BASE_URL", "https://api.ai.prod.us-east-1.aws.ml.hana.ondemand.com")
+    auth_url = os.environ.get("AICORE_AUTH_URL")
+    client_id = os.environ.get("AICORE_CLIENT_ID")
+    client_secret = os.environ.get("AICORE_CLIENT_SECRET")
+    resource_group = os.environ.get("AICORE_RESOURCE_GROUP", "default")
+
+    if not all([auth_url, client_id, client_secret]):
+        raise EnvironmentError(
+            "Missing required env vars: AICORE_AUTH_URL, AICORE_CLIENT_ID, AICORE_CLIENT_SECRET"
+        )
+
+    ai_core_client = AICoreV2Client(
+        base_url=base_url,
+        auth_url=auth_url,
+        client_id=client_id,
+        client_secret=client_secret,
+        resource_group=resource_group,
+    )
+    proxy_client = GenAIHubProxyClient(ai_core_client=ai_core_client)
+    return OpenAI(proxy_client=proxy_client)
+
+
 def evaluate_with_llm(charges: dict) -> dict:
     """Call SAP Generative AI Hub to evaluate the credit charge request."""
     try:
-        from gen_ai_hub.proxy.native.openai.clients import OpenAI
-        client = OpenAI()
+        client = _build_openai_client()
     except Exception as e:
         logger.error("Failed to initialise Generative AI Hub client: %s", e)
         raise
